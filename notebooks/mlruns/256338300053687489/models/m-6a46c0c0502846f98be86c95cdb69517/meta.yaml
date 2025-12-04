@@ -1,0 +1,10 @@
+artifact_location: file:///c:/Users/aubin/Majeur%20IA/data%20analysis/credit-scoring/notebooks/mlruns/256338300053687489/models/m-6a46c0c0502846f98be86c95cdb69517/artifacts
+creation_timestamp: 1764860892506
+experiment_id: '256338300053687489'
+last_updated_timestamp: 1764860903930
+model_id: m-6a46c0c0502846f98be86c95cdb69517
+model_type: null
+name: model
+source_run_id: f32fa7a28bea4029b2c19e6b75747dec
+status: 2
+status_message: null

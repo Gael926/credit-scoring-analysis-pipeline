@@ -1,0 +1,14 @@
+artifact_uri: file:///c:/Users/aubin/Majeur%20IA/data%20analysis/credit-scoring/notebooks/mlruns/0/fee5488ae8954ea3aeb828020f8edf7d/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: fee5488ae8954ea3aeb828020f8edf7d
+run_name: sedate-cub-264
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1764861284169
+status: 1
+tags: []
+user_id: aubin
