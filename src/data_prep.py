@@ -23,17 +23,8 @@ def load_data(file_name):
         return None
     return pd.read_csv(path)
 
-# --- 1. FEATURE ENGINEERING MÉTIER (Ratios financiers) ---
+# ratio financers inspirés du kernel kaggle
 def create_domain_features(df):
-    """
-    Crée les ratios financiers inspirés du kernel Kaggle.
-    Ces variables sont souvent les plus importantes pour le modèle.
-    """
-    print("Creation des features métier (Domain Knowledge)...")
-    
-    # Éviter la division par zéro en remplaçant 0 par NaN temporairement si besoin,
-    # mais ici on suppose que les montants sont > 0.
-    
     # 1. Pourcentage de crédit par rapport au revenu
     df['CREDIT_INCOME_PERCENT'] = df['AMT_CREDIT'] / df['AMT_INCOME_TOTAL']
     
@@ -48,9 +39,6 @@ def create_domain_features(df):
     df['DAYS_EMPLOYED_PERCENT'] = df['DAYS_EMPLOYED'] / df['DAYS_BIRTH']
     
     return df
-
-# --- 2. AGRÉGATIONS CIBLÉES (Smart Aggregations) ---
-# On ne garde que l'essentiel pour ne pas exploser le nombre de colonnes
 
 def get_bureau_features():
     bureau = load_data('bureau.csv')
@@ -118,14 +106,8 @@ def get_installments_features():
     del ins; gc.collect()
     return ins_agg
 
-# --- FONCTION PRINCIPALE ---
+# focntion pour les jointure dans la v1
 def load_and_feature_engineering():
-    """
-    Fonction maître appelée par le notebook.
-    Retourne le DataFrame complet (Train) prêt pour le nettoyage.
-    """
-    print("--- Chargement et Préparation des Données ---")
-    
     # 1. Chargement Train
     df = load_data('application_train.csv')
     print(f"Base Train chargée: {df.shape}")
@@ -156,6 +138,8 @@ def load_and_feature_engineering():
     print("--- Terminé ---")
     return df
 
+
+# focntion du prof
 def reduce_mem_usage(df):
     """
     Itère sur toutes les colonnes d'un DataFrame et réduit la précision
@@ -200,6 +184,7 @@ def reduce_mem_usage(df):
 
     return df
 
+#focntion pour retourner les colonnes avec des missing values propre
 def missing_values_table(df):
         # Total missing values
         mis_val = df.isnull().sum()
