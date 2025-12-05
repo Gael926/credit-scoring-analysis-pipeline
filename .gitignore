@@ -23,3 +23,6 @@ reports/
 
 #ignore les mlruns
 mlruns/
+!mlruns/.gitkeep
+!Notebooks/mlruns/.gitkeep
+!data/.gitkeep
