@@ -13,7 +13,7 @@ import gc
 
 # --- CONFIGURATION ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(os.path.dirname(CURRENT_DIR), 'data')
+DATA_PATH = os.path.join(os.path.dirname(CURRENT_DIR), 'data/raw')
 
 def load_data(file_name):
     """Charge un CSV depuis le dossier data de manière robuste."""
