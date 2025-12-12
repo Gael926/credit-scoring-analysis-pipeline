@@ -94,18 +94,52 @@ def get_pos_cash_features():
 def get_installments_features():
     ins = load_data('installments_payments.csv')
     if ins is None: return None
-    
-    # Feature Engineering clé : Le sous-paiement
+    # 1. PAYMENT_PERC : Pourcentage payé par rapport au dû
+    ins['PAYMENT_PERC'] = ins['AMT_PAYMENT'] / ins['AMT_INSTALMENT']
+    ins['PAYMENT_PERC'] = ins['PAYMENT_PERC'].replace([np.inf, -np.inf], np.nan)
+
+    # 2. PAYMENT_DIFF : Montant prescrit - Montant payé (Positif = Moins payé que prévu)
     ins['PAYMENT_DIFF'] = ins['AMT_INSTALMENT'] - ins['AMT_PAYMENT']
+
+    # 3. diff_days : Différence brute
+    ins['DIFF_DAYS'] = ins['DAYS_ENTRY_PAYMENT'] - ins['DAYS_INSTALMENT']
+
+    # 4. DPD (Days Past Due) : Retard (clip à 0 min)
+    ins['DPD'] = ins['DIFF_DAYS'].clip(lower=0)
+
+    # 5. DBD (Days Before Due) : Avance (clip à 0 min)
+    ins['DBD'] = (-ins['DIFF_DAYS']).clip(lower=0)
+
+    # 6. DPD_FLAG : Est-ce un retard ? (0 ou 1)
+    ins['DPD_FLAG'] = (ins['DPD'] > 0).astype(int)
     
     agg = {
-        'PAYMENT_DIFF': ['sum', 'mean'], # Total manquant
-        'DAYS_ENTRY_PAYMENT': ['max']    # Dernier paiement vu
+        'PAYMENT_DIFF': ['sum', 'mean'],    # Total manquant
+        'DAYS_ENTRY_PAYMENT': ['max'],      # Dernier paiement vu
+        'PAYMENT_PERC': ['mean', 'var'],    # Comportement de remboursement
+        'DPD': ['max', 'mean', 'sum'],      # Analyse des retards
+        'DBD': ['max', 'mean'],             # Analyse des avances
+        'DPD_FLAG': ['mean']                # Taux d'incidents (ex: 0.1 = 10% de retards)
     }
+
     ins_agg = ins.groupby('SK_ID_CURR').agg(agg)
     ins_agg.columns = pd.Index(['INSTAL_' + e[0] + "_" + e[1].upper() for e in ins_agg.columns.tolist()])
     del ins; gc.collect()
     return ins_agg
+
+def get_credit_card_features():
+    cc = load_data('credit_card_balance.csv')
+    if cc is None: return None
+    
+    agg = {
+        'AMT_BALANCE': ['mean'],              # Solde moyen
+        'AMT_DRAWINGS_ATM_CURRENT': ['mean'], # Retraits cash (signe de besoin)
+        'SK_DPD': ['max']                     # Retard carte
+    }
+    cc_agg = cc.groupby('SK_ID_CURR').agg(agg)
+    cc_agg.columns = pd.Index(['CC_' + e[0] + "_" + e[1].upper() for e in cc_agg.columns.tolist()])
+    del cc; gc.collect()
+    return cc_agg
 
 # focntion pour les jointure dans la v1
 def load_and_feature_engineering():
@@ -122,7 +156,8 @@ def load_and_feature_engineering():
         get_bureau_features,
         get_previous_features,
         get_pos_cash_features,
-        get_installments_features
+        get_installments_features,
+        get_credit_card_features
     ]
     
     for func in external_funcs:
