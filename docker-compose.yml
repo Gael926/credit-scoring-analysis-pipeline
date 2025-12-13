@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  model-serving:
+    build: .
+    image: credit-scoring-app
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/venv
+    environment:
+      - MLFLOW_TRACKING_URI=file:/app/mlruns
+    command: mlflow models serve -m models/final_model -p 5000 -h 0.0.0.0 --no-conda
+    restart: always
+
+  notebook-server:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+      - /app/venv
+    environment:
+      - MLFLOW_TRACKING_URI=file:/app/mlruns
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''
+    restart: always

@@ -1,28 +1,32 @@
-# Ignore virtual environment and environment files
+# Ignore virtual environment
 venv/
 env/
 .env
 
-# Ignore Python cache files
+# Ignore Python cache
 __pycache__/
 *.pyc
 
-# Ignore data files
-data/
-*.csv
-
-# Ignore Jupyter Notebook  checkpoints
+# Ignore Jupyter checkpoints
 .ipynb_checkpoints/
 
-# Ignore model outputs and reports
-models/
-reports/
-*.pkl
-*.png
-*.pdf
+# Data: Ignore all content but keep directories and .gitkeep files
+data/*
+!data/**/
+!data/**/.gitkeep
 
-#ignore les mlruns
-mlruns/
-!mlruns/.gitkeep
-!Notebooks/mlruns/.gitkeep
-!data/.gitkeep
+# Models: Ignore all content but keep directories and .gitkeep files
+models/*
+!models/**/
+!models/**/.gitkeep
+
+# MLruns: Ignore content but keep structure
+mlruns/*
+!mlruns/**/.gitkeep
+
+# Ignore specific file types everywhere (redundant if folders are ignored, but good safety)
+*.csv
+*.pkl
+
+# System files
+.DS_Store
