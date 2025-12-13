@@ -15,7 +15,7 @@ data/
 .ipynb_checkpoints/
 
 # Ignore model outputs and reports
-model/
+models/
 reports/
 *.pkl
 *.png

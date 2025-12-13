@@ -1,51 +1,55 @@
 import shap
 import matplotlib.pyplot as plt
-import pandas as pd
+import os
 import numpy as np
 
-def shap_global(model, X, plot_type="bar", max_display=20):
-    """
-    Calcule et affiche l'importance globale des features avec SHAP.
-    
-    Args:
-        model: Le modèle entraîné (ex: LightGBM).
-        X: Le DataFrame des features (peut être un échantillon).
-        plot_type: Type de graphique ('bar', 'dot', etc.).
-        max_display: Nombre de features à afficher.
-    """
-    print("Calcul des valeurs SHAP globales...")
-    # Pour LightGBM, TreeExplainer est optimisé
+def compute_shap(model, X):
+    """Calcule les valeurs SHAP."""
+    print("Calcul SHAP en cours...")
     explainer = shap.TreeExplainer(model)
-    
-    # shap_values peut être une liste (pour classification multiclasse) ou array
     shap_values = explainer.shap_values(X)
     
-    # Si classification binaire, shap_values[1] correspond souvent à la classe positive
+    # LightGBM retourne souvent [0, 1] pour binaire
     if isinstance(shap_values, list):
-        vals = shap_values[1]
+        return explainer, shap_values[1]
+    return explainer, shap_values
+
+def plot_shap_global(shap_values, X, save_path=None, max_display=10):
+    """
+    Affiche l'importance globale (les variables qui impactent le plus).
+    Utilise un Beeswarm plot mais limité aux top variables pour la clarté.
+    """
+    plt.figure(figsize=(10, 6))
+    # Beeswarm montre l'importance ET la direction (rouge/bleu)
+    shap.summary_plot(shap_values, X, plot_type="beeswarm", max_display=max_display, show=False)
+    plt.title(f"Top {max_display} Variables (Impact & Direction)")
+    plt.tight_layout()
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        plt.close()
+        print(f"Graphique global sauvegardé: {save_path}")
     else:
-        vals = shap_values
+        plt.show()
 
-    plt.figure(figsize=(10, 8))
-    shap.summary_plot(vals, X, plot_type=plot_type, max_display=max_display, show=False)
-    plt.title("SHAP Feature Importance")
-    plt.tight_layout()
-    # plt.show() # À appeler dans le notebook
-    return explainer, vals
-
-def shap_local(model, X, instance_index):
+def plot_shap_local(explainer, X, index, save_path=None):
     """
-    Affiche l'explication locale pour une instance donnée (Waterfall plot).
+    Explication locale pour un client spécifique.
+    Montre pourquoi ce client a eu ce score.
     """
-    print(f"Calcul SHAP local pour l'index {instance_index}...")
-    explainer = shap.TreeExplainer(model)
+    # Création objet Explanation pour le waterfall plot
+    explanation = explainer(X)
     
-    # On utilise l'objet Explanation pour les nouveaux plots
-    shap_explanation = explainer(X)
-    
-    plt.figure()
-    # Waterfall plot pour l'instance spécifique
-    shap.plots.waterfall(shap_explanation[instance_index], show=False)
-    plt.title(f"Explication Locale (Index {instance_index})")
+    plt.figure(figsize=(8, 6))
+    shap.plots.waterfall(explanation[index], max_display=10, show=False)
+    plt.title(f"Explication Client {index}")
     plt.tight_layout()
-    # plt.show()
+    
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, bbox_inches='tight')
+        plt.close()
+        print(f"Graphique local sauvegardé: {save_path}")
+    else:
+        plt.show()
