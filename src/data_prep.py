@@ -141,7 +141,7 @@ def get_credit_card_features():
     del cc; gc.collect()
     return cc_agg
 
-# focntion pour les jointure dans la v1
+# Fonction pour les jointures dans la v1
 def load_and_feature_engineering():
     # 1. Chargement Train
     df = load_data('application_train.csv')
@@ -175,7 +175,7 @@ def load_and_feature_engineering():
     return df
 
 
-# focntion du prof
+# Fonction du prof
 def reduce_mem_usage(df):
     """
     Itère sur toutes les colonnes d'un DataFrame et réduit la précision
@@ -220,7 +220,7 @@ def reduce_mem_usage(df):
 
     return df
 
-#focntion pour retourner les colonnes avec des missing values propre
+# Fonction pour retourner les colonnes avec des missing values propres
 def missing_values_table(df):
         # Total missing values
         mis_val = df.isnull().sum()
