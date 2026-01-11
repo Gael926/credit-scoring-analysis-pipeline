@@ -5,39 +5,13 @@ Ce projet implémente un pipeline complet de Credit Scoring, de la préparation 
 ## Architecture du Pipeline
 
 ```mermaid
-flowchart LR
-    subgraph Data["📊 Données"]
-        A[application_train.csv] --> B[bureau.csv]
-        A --> C[previous_application.csv]
-        A --> D[installments_payments.csv]
-    end
-    
-    subgraph Prep["🔧 Préparation"]
-        B --> E[Feature Engineering]
-        C --> E
-        D --> E
-        A --> E
-        E --> F[X_prepared.pkl]
-    end
-    
-    subgraph Train["🎯 Entraînement"]
-        F --> G[Benchmark Models]
-        G --> H[Optuna Optimization]
-        H --> I[LightGBM Final]
-        I --> J[MLflow Tracking]
-    end
-    
-    subgraph Deploy["🚀 Déploiement"]
-        J --> K[best_model.pkl]
-        K --> L[Docker API]
-        L --> M[Prédictions]
-    end
-    
-    subgraph Explain["📈 Explicabilité"]
-        I --> N[SHAP Values]
-        N --> O[Global Importance]
-        N --> P[Local Explanations]
-    end
+flowchart TD
+    A[📊 Données CSV] --> B[🔧 Feature Engineering]
+    B --> C[🎯 Entraînement LightGBM]
+    C --> D[⚙️ Optimisation Optuna]
+    D --> E[📦 MLflow Tracking]
+    E --> F[🚀 Docker API]
+    C --> G[📈 SHAP Explainability]
 ```
 
 
