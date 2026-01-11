@@ -86,7 +86,8 @@ def train_and_log(model: Any, model_name: str, X_train: pd.DataFrame, y_train: p
     with mlflow.start_run(run_name=run_name):
         print(f"Entraînement {run_name}...")
         mlflow.set_tag("dataset", dataset_name)
-        if params: mlflow.log_params(params)
+        if params:
+            mlflow.log_params(params)
         
         # entrainement
         if "LightGBM" in model_name:
@@ -124,9 +125,12 @@ def train_and_log(model: Any, model_name: str, X_train: pd.DataFrame, y_train: p
         mlflow.log_metrics(metrics)
         
         # enregistement des modèles
-        if "LightGBM" in model_name: mlflow.lightgbm.log_model(model, "model")
-        elif "XGBoost" in model_name: mlflow.xgboost.log_model(model, "model")
-        else: mlflow.sklearn.log_model(model, "model")
+        if "LightGBM" in model_name:
+            mlflow.lightgbm.log_model(model, "model")
+        elif "XGBoost" in model_name:
+            mlflow.xgboost.log_model(model, "model")
+        else:
+            mlflow.sklearn.log_model(model, "model")
             
         print(f"Metrics (Test): {metrics}")
         return model, metrics

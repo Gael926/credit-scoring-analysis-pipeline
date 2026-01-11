@@ -42,7 +42,8 @@ def create_domain_features(df: pd.DataFrame) -> pd.DataFrame:
 # Fonctions pour les jointures externes
 def get_bureau_features() -> Optional[pd.DataFrame]:
     bureau = load_data('bureau.csv')
-    if bureau is None: return None
+    if bureau is None:
+        return None
     
     # On veut savoir la DETTE ACTUELLE TOTALE 
     bureau['CREDIT_ACTIVE_BINARY'] = (bureau['CREDIT_ACTIVE'] == 'Active').astype(int)
@@ -58,13 +59,15 @@ def get_bureau_features() -> Optional[pd.DataFrame]:
     
     bureau_agg = bureau.groupby('SK_ID_CURR').agg(agg)
     bureau_agg.columns = pd.Index(['BUREAU_' + e[0] + "_" + e[1].upper() for e in bureau_agg.columns.tolist()])
-    del bureau; gc.collect()
+    del bureau
+    gc.collect()
     return bureau_agg
 
 
 def get_previous_features() -> Optional[pd.DataFrame]:
     prev = load_data('previous_application.csv')
-    if prev is None: return None
+    if prev is None:
+        return None
 
     prev['APP_REFUSED'] = (prev['NAME_CONTRACT_STATUS'] == 'Refused').astype(int)
     
@@ -76,13 +79,15 @@ def get_previous_features() -> Optional[pd.DataFrame]:
     
     prev_agg = prev.groupby('SK_ID_CURR').agg(agg)
     prev_agg.columns = pd.Index(['PREV_' + e[0] + "_" + e[1].upper() for e in prev_agg.columns.tolist()])
-    del prev; gc.collect()
+    del prev
+    gc.collect()
     return prev_agg
 
 
 def get_pos_cash_features() -> Optional[pd.DataFrame]:
     pos = load_data('POS_CASH_balance.csv')
-    if pos is None: return None
+    if pos is None:
+        return None
     
     agg = {
         'SK_DPD': ['max', 'mean'],  # Retards (Days Past Due)
@@ -90,12 +95,14 @@ def get_pos_cash_features() -> Optional[pd.DataFrame]:
     }
     pos_agg = pos.groupby('SK_ID_CURR').agg(agg)
     pos_agg.columns = pd.Index(['POS_' + e[0] + "_" + e[1].upper() for e in pos_agg.columns.tolist()])
-    del pos; gc.collect()
+    del pos
+    gc.collect()
     return pos_agg
 
 def get_installments_features() -> Optional[pd.DataFrame]:
     ins = load_data('installments_payments.csv')
-    if ins is None: return None
+    if ins is None:
+        return None
     # PAYMENT_PERC : Pourcentage payé par rapport au dû
     ins['PAYMENT_PERC'] = ins['AMT_PAYMENT'] / ins['AMT_INSTALMENT']
     ins['PAYMENT_PERC'] = ins['PAYMENT_PERC'].replace([np.inf, -np.inf], np.nan)
@@ -126,12 +133,14 @@ def get_installments_features() -> Optional[pd.DataFrame]:
 
     ins_agg = ins.groupby('SK_ID_CURR').agg(agg)
     ins_agg.columns = pd.Index(['INSTAL_' + e[0] + "_" + e[1].upper() for e in ins_agg.columns.tolist()])
-    del ins; gc.collect()
+    del ins
+    gc.collect()
     return ins_agg
 
 def get_credit_card_features() -> Optional[pd.DataFrame]:
     cc = load_data('credit_card_balance.csv')
-    if cc is None: return None
+    if cc is None:
+        return None
     
     agg = {
         'AMT_BALANCE': ['mean'],              # Solde moyen
@@ -140,7 +149,8 @@ def get_credit_card_features() -> Optional[pd.DataFrame]:
     }
     cc_agg = cc.groupby('SK_ID_CURR').agg(agg)
     cc_agg.columns = pd.Index(['CC_' + e[0] + "_" + e[1].upper() for e in cc_agg.columns.tolist()])
-    del cc; gc.collect()
+    del cc
+    gc.collect()
     return cc_agg
 
 # Fonction pour les jointures
@@ -183,7 +193,7 @@ def reduce_mem_usage(df: pd.DataFrame) -> pd.DataFrame:
         col_type = df[col].dtype
 
         # Traiter uniquement les colonnes numériques
-        if col_type != object and col_type != str and col_type != bool:
+        if col_type is not object and col_type is not str and col_type is not bool:
             c_min = df[col].min()
             c_max = df[col].max()
 
