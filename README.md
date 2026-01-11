@@ -2,6 +2,45 @@
 
 Ce projet implémente un pipeline complet de Credit Scoring, de la préparation des données au déploiement du modèle, en passant par l'entraînement, l'optimisation et l'explicabilité (SHAP).
 
+## Architecture du Pipeline
+
+```mermaid
+flowchart LR
+    subgraph Data["📊 Données"]
+        A[application_train.csv] --> B[bureau.csv]
+        A --> C[previous_application.csv]
+        A --> D[installments_payments.csv]
+    end
+    
+    subgraph Prep["🔧 Préparation"]
+        B --> E[Feature Engineering]
+        C --> E
+        D --> E
+        A --> E
+        E --> F[X_prepared.pkl]
+    end
+    
+    subgraph Train["🎯 Entraînement"]
+        F --> G[Benchmark Models]
+        G --> H[Optuna Optimization]
+        H --> I[LightGBM Final]
+        I --> J[MLflow Tracking]
+    end
+    
+    subgraph Deploy["🚀 Déploiement"]
+        J --> K[best_model.pkl]
+        K --> L[Docker API]
+        L --> M[Prédictions]
+    end
+    
+    subgraph Explain["📈 Explicabilité"]
+        I --> N[SHAP Values]
+        N --> O[Global Importance]
+        N --> P[Local Explanations]
+    end
+```
+
+
 ## Structure du Projet
 
 - `data/` : Données brutes et procesées.
@@ -69,6 +108,3 @@ Pour arrêter les services, faites `Ctrl+C` dans le terminal.
 
 ### 4. Test API
 Ouvrir `notebooks/04_mlflow_serving_test.ipynb` pour envoyer des requêtes au conteneur Docker et obtenir des prédictions.
-
-## Auteur
-Aubin Hérault, Gael Le Reun, Thomas Bertho

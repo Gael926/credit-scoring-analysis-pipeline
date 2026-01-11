@@ -3,12 +3,14 @@ import pandas as pd
 import numpy as np
 import os
 import gc
+from typing import Optional, Callable, List
 
-# --- CONFIGURATION ---
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(os.path.dirname(CURRENT_DIR), 'data/raw')
+try:
+    from config import DATA_PATH
+except ImportError:
+    from src.config import DATA_PATH
 
-def load_data(file_name):
+def load_data(file_name: str) -> Optional[pd.DataFrame]:
     #Charge un CSV depuis le dossier data de manière robuste.
     path = os.path.join(DATA_PATH, file_name)
     if not os.path.exists(path):
@@ -17,11 +19,11 @@ def load_data(file_name):
     return pd.read_csv(path)
 
 # Ratios Financiers (colonne créées dans les codes kaggle et le code du prof)
-def create_domain_features(df):
+def create_domain_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Pourcentage de crédit par rapport au revenu
     df['CREDIT_INCOME_PERCENT'] = df['AMT_CREDIT'] / df['AMT_INCOME_TOTAL']
-    #Pourcentage de l'annuité par rapport au revenu (Taux d'endettement)
+    # Pourcentage de l'annuité par rapport au revenu (Taux d'endettement)
     df['ANNUITY_INCOME_PERCENT'] = df['AMT_ANNUITY'] / df['AMT_INCOME_TOTAL']
     # Durée du crédit en mois
     df['CREDIT_TERM'] = df['AMT_ANNUITY'] / df['AMT_CREDIT']
@@ -38,7 +40,7 @@ def create_domain_features(df):
     return df
 
 # Fonctions pour les jointures externes
-def get_bureau_features():
+def get_bureau_features() -> Optional[pd.DataFrame]:
     bureau = load_data('bureau.csv')
     if bureau is None: return None
     
@@ -60,14 +62,14 @@ def get_bureau_features():
     return bureau_agg
 
 
-def get_previous_features():
+def get_previous_features() -> Optional[pd.DataFrame]:
     prev = load_data('previous_application.csv')
     if prev is None: return None
 
     prev['APP_REFUSED'] = (prev['NAME_CONTRACT_STATUS'] == 'Refused').astype(int)
     
     agg = {
-        'AMT_ANNUITY': ['mean'],   # Combien il payait avant ?
+        'AMT_ANNUITY': ['mean'],   # Combien payait-il avant ?
         'APP_REFUSED': ['mean'],   # Taux de refus passé chez nous
         'CNT_PAYMENT': ['mean']    # Durée moyenne demandée
     }
@@ -78,7 +80,7 @@ def get_previous_features():
     return prev_agg
 
 
-def get_pos_cash_features():
+def get_pos_cash_features() -> Optional[pd.DataFrame]:
     pos = load_data('POS_CASH_balance.csv')
     if pos is None: return None
     
@@ -91,26 +93,26 @@ def get_pos_cash_features():
     del pos; gc.collect()
     return pos_agg
 
-def get_installments_features():
+def get_installments_features() -> Optional[pd.DataFrame]:
     ins = load_data('installments_payments.csv')
     if ins is None: return None
-    # 1. PAYMENT_PERC : Pourcentage payé par rapport au dû
+    # PAYMENT_PERC : Pourcentage payé par rapport au dû
     ins['PAYMENT_PERC'] = ins['AMT_PAYMENT'] / ins['AMT_INSTALMENT']
     ins['PAYMENT_PERC'] = ins['PAYMENT_PERC'].replace([np.inf, -np.inf], np.nan)
 
-    # 2. PAYMENT_DIFF : Montant prescrit - Montant payé (Positif = Moins payé que prévu)
+    # PAYMENT_DIFF : Montant prescrit - Montant payé (Positif = Moins payé que prévu)
     ins['PAYMENT_DIFF'] = ins['AMT_INSTALMENT'] - ins['AMT_PAYMENT']
 
-    # 3. diff_days : Différence brute
+    # diff_days : Différence brute
     ins['DIFF_DAYS'] = ins['DAYS_ENTRY_PAYMENT'] - ins['DAYS_INSTALMENT']
 
-    # 4. DPD (Days Past Due) : Retard (clip à 0 min)
+    # DPD (Days Past Due) : Retard (clip à 0 min)
     ins['DPD'] = ins['DIFF_DAYS'].clip(lower=0)
 
-    # 5. DBD (Days Before Due) : Avance (clip à 0 min)
+    # DBD (Days Before Due) : Avance (clip à 0 min)
     ins['DBD'] = (-ins['DIFF_DAYS']).clip(lower=0)
 
-    # 6. DPD_FLAG : Est-ce un retard ? (0 ou 1)
+    # DPD_FLAG : Est-ce un retard ? (0 ou 1)
     ins['DPD_FLAG'] = (ins['DPD'] > 0).astype(int)
     
     agg = {
@@ -127,7 +129,7 @@ def get_installments_features():
     del ins; gc.collect()
     return ins_agg
 
-def get_credit_card_features():
+def get_credit_card_features() -> Optional[pd.DataFrame]:
     cc = load_data('credit_card_balance.csv')
     if cc is None: return None
     
@@ -142,7 +144,7 @@ def get_credit_card_features():
     return cc_agg
 
 # Fonction pour les jointures
-def load_and_feature_engineering():
+def load_and_feature_engineering() -> pd.DataFrame:
     # Chargement Train
     df = load_data('application_train.csv')
     print(f"Base Train chargée: {df.shape}")
@@ -151,7 +153,7 @@ def load_and_feature_engineering():
     df = create_domain_features(df)
     
     # Jointures Externes
-    external_funcs = [
+    external_funcs: List[Callable[[], Optional[pd.DataFrame]]] = [
         get_bureau_features,
         get_previous_features,
         get_pos_cash_features,
@@ -173,7 +175,7 @@ def load_and_feature_engineering():
 
 
 # Fonction du prof pour réduire la mémoire en reduisant la precision des types numériques
-def reduce_mem_usage(df):
+def reduce_mem_usage(df: pd.DataFrame) -> pd.DataFrame:
     start_mem = df.memory_usage().sum() / 1024**2
     print(f"Usage mémoire initial du DataFrame: {start_mem:.2f} MB")
 
@@ -196,7 +198,7 @@ def reduce_mem_usage(df):
                 elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
                     df[col] = df[col].astype(np.int64)
 
-            # --- Conversion des décimaux (Floats) ---
+            # Conversion des décimaux (Floats)
             else:
                 # La majorité de vos colonnes d'agrégats (mean, var, proportions) sont ici
                 if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
@@ -214,7 +216,7 @@ def reduce_mem_usage(df):
     return df
 
 # Fonction pour retourner les colonnes avec des missing values propres
-def missing_values_table(df):
+def missing_values_table(df: pd.DataFrame) -> pd.DataFrame:
         # Total missing values
         mis_val = df.isnull().sum()
         

@@ -14,41 +14,44 @@ import mlflow.lightgbm
 import joblib
 import os
 import optuna
+from typing import Tuple, Dict, List, Optional, Any
+from numpy.typing import ArrayLike
 
 try:
+    from config import RANDOM_SEED, DEFAULT_SCALE_POS_WEIGHT
     from metrics import calculate_auc, calculate_recall, calculate_f1, business_cost_metric, calculate_accuracy
 except ImportError:
+    from src.config import RANDOM_SEED, DEFAULT_SCALE_POS_WEIGHT
     from src.metrics import calculate_auc, calculate_recall, calculate_f1, business_cost_metric, calculate_accuracy
 
 # classe pour l'ensemble des modèles pour la cross validation
 class Ensemble:
-    def __init__(self, models):
+    def __init__(self, models: List[lgb.LGBMClassifier]) -> None:
         self.models = models
     
-    def predict_proba(self, X):
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         preds = [m.predict_proba(X)[:, 1] for m in self.models]
         mean_preds = np.mean(preds, axis=0)
         return np.vstack([1-mean_preds, mean_preds]).T
         
-    def predict(self, X):
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
         return (self.predict_proba(X)[:, 1] > 0.5).astype(int)
 
-RANDOM_SEED = 42
 # fonction de métrique custom pour LightGBM
-def lgb_custom_metric(y_true, y_pred):
+def lgb_custom_metric(y_true: ArrayLike, y_pred: ArrayLike) -> Tuple[str, float, bool]:
     # y_pred sont les probabilités de la classe 1
     cost = business_cost_metric(y_true, y_pred, threshold=0.5)
     return "business_cost", cost, False
 
 # fonction de recherche du meilleur seuil
-def find_best_threshold(y_true, y_prob):
+def find_best_threshold(y_true: ArrayLike, y_prob: ArrayLike) -> Tuple[float, float]:
     thresholds = np.arange(0.01, 1.0, 0.01)
     costs = [business_cost_metric(y_true, y_prob, t) for t in thresholds]
     best_idx = np.argmin(costs)
     return thresholds[best_idx], costs[best_idx]
 
 # fonction de split 70/15/15 avec stratification
-def get_train_val_test_split(X, y):
+def get_train_val_test_split(X: pd.DataFrame, y: pd.Series) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, test_size=0.3, random_state=RANDOM_SEED, stratify=y
     )
@@ -58,7 +61,7 @@ def get_train_val_test_split(X, y):
     return X_train, y_train, X_val, y_val, X_test, y_test
 
 #Calcule AUC, Recall, F1, Accuracy et Coût Métier
-def evaluate_model(model, X, y, threshold=0.5):
+def evaluate_model(model: Any, X: pd.DataFrame, y: pd.Series, threshold: float = 0.5) -> Dict[str, float]:
     if hasattr(model, "predict_proba"):
         y_prob = model.predict_proba(X)[:, 1]
     else:
@@ -75,7 +78,7 @@ def evaluate_model(model, X, y, threshold=0.5):
     }
 
 # fonction d'entraînement et logging MLflow
-def train_and_log(model, model_name, X_train, y_train, X_val, y_val, X_test, y_test, params=None, dataset_name="v2"):
+def train_and_log(model: Any, model_name: str, X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, X_test: pd.DataFrame, y_test: pd.Series, params: Optional[Dict[str, Any]] = None, dataset_name: str = "v2") -> Tuple[Any, Dict[str, float]]:
     # nom du run
     run_name = f"{model_name}_{dataset_name}"
     
@@ -129,11 +132,11 @@ def train_and_log(model, model_name, X_train, y_train, X_val, y_val, X_test, y_t
         return model, metrics
 
 # fonctions d'entrainement simples
-def train_dummy(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name):
+def train_dummy(X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, X_test: pd.DataFrame, y_test: pd.Series, dataset_name: str) -> Tuple[DummyClassifier, Dict[str, float]]:
     model = DummyClassifier(strategy='most_frequent')
     return train_and_log(model, "Dummy", X_train, y_train, X_val, y_val, X_test, y_test, {}, dataset_name)
 
-def train_random_forest(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name):
+def train_random_forest(X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, X_test: pd.DataFrame, y_test: pd.Series, dataset_name: str) -> Tuple[Pipeline, Dict[str, float]]:
     pipeline = Pipeline([
          ('imputer', SimpleImputer(strategy='median')),
          ('model', RandomForestClassifier(
@@ -147,8 +150,8 @@ def train_random_forest(X_train, y_train, X_val, y_val, X_test, y_test, dataset_
     ])
     return train_and_log(pipeline, "RandomForest", X_train, y_train, X_val, y_val, X_test, y_test, {}, dataset_name)
 
-def train_xgboost(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name):  
-    scale_weight = 10 
+def train_xgboost(X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, X_test: pd.DataFrame, y_test: pd.Series, dataset_name: str) -> Tuple[XGBClassifier, Dict[str, float]]:  
+    scale_weight = DEFAULT_SCALE_POS_WEIGHT
     model = XGBClassifier(
         n_estimators=1000, 
         learning_rate=0.05, 
@@ -161,7 +164,7 @@ def train_xgboost(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name):
     )
     return train_and_log(model, "XGBoost", X_train, y_train, X_val, y_val, X_test, y_test, {}, dataset_name)
 
-def train_lightgbm(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name, params=None):
+def train_lightgbm(X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, X_test: pd.DataFrame, y_test: pd.Series, dataset_name: str, params: Optional[Dict[str, Any]] = None) -> Tuple[lgb.LGBMClassifier, Dict[str, float]]:
     if params is None:
         params = {
             "n_estimators": 1000, 
@@ -177,7 +180,7 @@ def train_lightgbm(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name,
 
 
 # fonction d'entrainement avec cross-validation
-def train_model_cv(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name, params=None):
+def train_model_cv(X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, X_test: pd.DataFrame, y_test: pd.Series, dataset_name: str, params: Optional[Dict[str, Any]] = None) -> Tuple[Ensemble, Dict[str, float]]:
     
     # Stratified K-Fold sur l'ensemble d'entraînement
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_SEED)
@@ -191,7 +194,7 @@ def train_model_cv(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name,
         }
     
     # Initialisation de la liste des modèles
-    models = []
+    models: List[lgb.LGBMClassifier] = []
     
     # Run MLflow 
     with mlflow.start_run(run_name=f"LGBM_Ensemble_{dataset_name}"):
@@ -239,8 +242,8 @@ def train_model_cv(X_train, y_train, X_val, y_val, X_test, y_test, dataset_name,
         return ensemble, metrics
 
 # fonction d'optimisation avec Optuna
-def optimize_lightgbm(X_train, y_train, X_val, y_val, n_trials=30):
-    def objective(trial):
+def optimize_lightgbm(X_train: pd.DataFrame, y_train: pd.Series, X_val: pd.DataFrame, y_val: pd.Series, n_trials: int = 30) -> Dict[str, Any]:
+    def objective(trial: optuna.Trial) -> float:
         param = {
             "objective": "binary", "metric": "custom", "verbosity": -1,
             "boosting_type": "gbdt", "random_state": RANDOM_SEED, "n_jobs": -1,
