@@ -13,6 +13,8 @@ services:
       - MLFLOW_TRACKING_URI=file:/app/mlruns
     command: mlflow models serve -m models/final_model -p 5000 -h 0.0.0.0 --no-conda
     restart: always
+    networks:
+      - credit-network
 
   notebook-server:
     build: .
@@ -25,3 +27,27 @@ services:
       - MLFLOW_TRACKING_URI=file:/app/mlruns
     command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''
     restart: always
+    networks:
+      - credit-network
+
+  streamlit-app:
+    image: python:3.11-slim
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - API_URL=http://model-serving:5000/invocations
+    command: >
+      bash -c "pip install streamlit requests pandas --quiet &&
+               streamlit run app_dashboard.py --server.address=0.0.0.0 --server.port=8501"
+    restart: always
+    depends_on:
+      - model-serving
+    networks:
+      - credit-network
+
+networks:
+  credit-network:
+    driver: bridge

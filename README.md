@@ -2,7 +2,7 @@
 
 Ce projet implémente un pipeline complet de Credit Scoring, de la préparation des données au déploiement du modèle, en passant par l'entraînement, l'optimisation et l'explicabilité (SHAP).
 
-## Architecture du Pipeline
+## Architecture
 
 ```mermaid
 flowchart TD
@@ -10,75 +10,69 @@ flowchart TD
     B --> C[🎯 Entraînement LightGBM]
     C --> D[⚙️ Optimisation Optuna]
     D --> E[📦 MLflow Tracking]
-    E --> F[🚀 Docker API]
-    C --> G[📈 SHAP Explainability]
+    E --> F[🚀 API MLflow]
+    F --> G[🖥️ Dashboard Streamlit]
+    C --> H[📈 SHAP Explainability]
 ```
 
+[![CI Pipeline](https://github.com/Gael926/credit-scoring/actions/workflows/ci.yml/badge.svg)](https://github.com/Gael926/credit-scoring/actions/workflows/ci.yml)
 
 ## Structure du Projet
 
-- `data/` : Données brutes et procesées.
-- `notebooks/` :
-  - `01_v2_data_preparation.ipynb` : Préparation des données (Feature Engineering).
-  - `02_model_training.ipynb` : Entraînement, Optimisation (Optuna) et Tracking (MLflow).
-  - `03_explainability.ipynb` : Analyse SHAP (Globale et Locale).
-  - `04_mlflow_serving_test.ipynb` : Test de l'API de prédiction.
-- `src/` : Code modulaire (`model_utils.py`, `explainability.py`, etc.).
-- `models/` : Artefacts des modèles entraînés.
-- `mlruns/` : Tracking MLflow local.
-- `reports/` : Figures et analyses.
+```
+├── app_dashboard.py          # Dashboard Streamlit
+├── main.py                   # Pipeline complet
+├── docker-compose.yml        # Services Docker
+├── src/                      # Code modulaire
+├── scripts/                  # Scripts utilitaires
+├── notebooks/                # Exploration et tests
+├── models/                   # Modèles entraînés
+├── dashboard_data/           # Données pour le dashboard
+└── reports/figures/          # Graphiques SHAP
+```
 
 ## Prérequis
+
 - Python 3.11
-- Docker Desktop (installé et lancé) : [Télécharger Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- Docker Desktop : [Télécharger](https://www.docker.com/products/docker-desktop/)
 
 ## Installation
 
-1. Cloner le projet.
-2. Installer les dépendances :
 ```bash
 pip install -r requirements.txt
 ```
-3. Lancer MLflow UI (optionnel pour visualiser les runs) :
+
+## Exécution
+
+### Option 1: Pipeline complet
 ```bash
-mlflow ui
+python main.py --n-trials 10
 ```
 
-## Étapes d'Exécution
+Options : `--skip-training`, `--skip-shap`, `--n-trials N`
 
-### 1. Entraînement
-Ouvrir et exécuter `notebooks/01_v1_data_preparation.ipynb`.
-Ouvrir et exécuter `notebooks/01_v2_data_preparation.ipynb`.
-- Préparation des données (Feature Engineering).
-- 2 versions de la préparation des données différentes.
+### Option 2: Docker (Production)
 
-Ouvrir et exécuter `notebooks/02_model_training.ipynb`.
-- Entraîne plusieurs modèles (Dummy, Random Forest, XGBoost, LightGBM).
-- Régression logistique via imputation.
-- Optimise LightGBM avec Optuna.
-- Sauvegarde le meilleur modèle dans `models/best_model.pkl` et `models/final_model` (format MLflow).
+**1. Générer les données du dashboard :**
+```bash
+python scripts/generate_dashboard_data.py
+```
 
-### 2. Explicabilité
-Ouvrir et exécuter `notebooks/03_explainability.ipynb`.
-- Génère les graphiques SHAP (Global Feature Importance, Beeswarm).
-- Génère des explications locales pour des clients spécifiques.
-- Les figures sont sauvegardées dans `reports/figures`.
-
-### 3. Déploiement (Docker)
-Le projet utilise Docker Compose pour lancer simultanément :
-1. **L'API de prédiction (MLflow)** sur le port `5000`.
-2. **Un serveur Jupyter Notebook** sur le port `8888`.
-
-**Lancer les services :**
+**2. Lancer les services :**
 ```bash
 docker compose up --build
 ```
-*Note : Assurez-vous que Docker Desktop est lancé.*
 
-- Accès API : `http://localhost:5000`
-- Accès Jupyter : `http://localhost:8888` (le token est désactivé)
+**Services disponibles :**
+| Service | URL | Description |
+|---------|-----|-------------|
+| Dashboard | `http://localhost:8501` | Interface utilisateur Streamlit |
+| API MLflow | `http://localhost:5000` | API de prédiction |
+| Jupyter | `http://localhost:8888` | Notebooks |
 
-Pour arrêter les services, faites `Ctrl+C` dans le terminal.
+### Option 3: Notebooks (Exploration)
 
-### 4. Test API
-Ouvrir `notebooks/04_mlflow_serving_test.ipynb` pour envoyer des requêtes au conteneur Docker et obtenir des prédictions.
+- `01_v2_data_preparation.ipynb` : Feature Engineering
+- `02_model_training.ipynb` : Entraînement et Optimisation
+- `03_explainability.ipynb` : Analyse SHAP
+- `04_mlflow_serving_test.ipynb` : Test de l'API
