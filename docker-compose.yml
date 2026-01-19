@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
   model-serving:
-    build: .
-    image: credit-scoring-app
+    image: python:3.11-slim
     ports:
       - "5000:5000"
     volumes:
       - .:/app
-      - /app/venv
-    environment:
-      - MLFLOW_TRACKING_URI=file:/app/mlruns
-    command: mlflow models serve -m models/final_model -p 5000 -h 0.0.0.0 --no-conda
+    working_dir: /app
+    command: >
+      bash -c "apt-get update && apt-get install -y libgomp1 && 
+               pip install flask pandas numpy scikit-learn joblib lightgbm --quiet &&
+               python api_server.py"
     restart: always
     networks:
       - credit-network

@@ -27,7 +27,7 @@ def load_sample_clients():
 
 
 def predict_client(features_dict: dict, feature_order: list) -> dict:
-    """Envoie une requête à l'API MLflow et retourne la prédiction."""
+    """Envoie une requête à l'API et retourne la prédiction."""
     # Ordonner les features selon l'ordre attendu
     ordered_values = [features_dict.get(f, 0.0) for f in feature_order]
     
@@ -48,16 +48,11 @@ def predict_client(features_dict: dict, feature_order: list) -> dict:
         response.raise_for_status()
         result = response.json()
         
-        # MLflow retourne {"predictions": [0]} ou {"predictions": [[0.2, 0.8]]}
+        # L'API retourne {"predictions": [0.75]} (probabilité)
         predictions = result.get("predictions", [])
         if predictions:
-            pred = predictions[0]
-            if isinstance(pred, list):
-                proba = pred[1]
-                classe = 1 if proba > 0.5 else 0
-            else:
-                classe = int(pred)
-                proba = float(pred)
+            proba = float(predictions[0])
+            classe = 1 if proba > 0.5 else 0
             return {"success": True, "classe": classe, "proba": proba}
         return {"success": False, "error": "Pas de prédiction"}
     except requests.exceptions.ConnectionError:
