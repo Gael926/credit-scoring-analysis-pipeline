@@ -74,12 +74,12 @@ def main():
         st.error("Données manquantes. Exécutez d'abord: python scripts/generate_dashboard_data.py")
         return
     
-    # Onglets
-    tab1, tab2 = st.tabs(["📋 Audit Client", "🧮 Simulateur"])
+    # Deux colonnes côte à côte
+    col_audit, col_sim = st.columns(2, gap="large")
     
-    # Onglet 1 : Audit
-    with tab1:
-        st.header("Audit d'un client existant")
+    # Colonne gauche : Audit
+    with col_audit:
+        st.subheader("Audit Client")
         
         # Sélection du client
         client_ids = sample_clients["SK_ID_CURR"].tolist()
@@ -88,156 +88,149 @@ def main():
         if selected_id:
             client_row = sample_clients[sample_clients["SK_ID_CURR"] == selected_id].iloc[0]
             
-            col1, col2 = st.columns(2)
+            # Vrai label
+            true_label = int(client_row.get("TARGET", -1))
+            if true_label == 1:
+                st.warning("Client en défaut (TARGET=1)")
+            elif true_label == 0:
+                st.success("Client sain (TARGET=0)")
             
-            with col1:
-                st.subheader("Informations du client")
-                # Afficher quelques features clés
-                info_cols = ["AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", 
-                             "DAYS_BIRTH", "DAYS_EMPLOYED", "EXT_SOURCE_MEAN"]
-                for col in info_cols:
-                    if col in client_row.index:
-                        value = client_row[col]
-                        if "DAYS" in col and not pd.isna(value):
-                            value = abs(int(value))
-                            if col == "DAYS_BIRTH":
-                                st.metric(f"Âge (jours)", f"{value} ({value//365} ans)")
-                            else:
-                                st.metric(col, f"{value} jours")
-                        elif not pd.isna(value):
-                            st.metric(col, f"{value:,.2f}")
-                
-                # Vrai label
-                true_label = int(client_row.get("TARGET", -1))
-                if true_label == 1:
-                    st.warning("⚠️ Client en défaut (TARGET=1)")
-                elif true_label == 0:
-                    st.success("✅ Client sain (TARGET=0)")
+            # Informations clés
+            st.caption("📊 Informations du client")
+            info_cols = ["AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "DAYS_BIRTH", "DAYS_EMPLOYED"]
             
-            with col2:
-                st.subheader("Prédiction du modèle")
-                
-                if st.button("🔮 Obtenir la prédiction", key="predict_audit"):
-                    # Préparation des features
-                    features_dict = {}
-                    for f in feature_order:
-                        if f in client_row.index:
-                            val = client_row[f]
-                            features_dict[f] = 0.0 if pd.isna(val) else float(val)
-                        else:
-                            features_dict[f] = medians.get(f, 0.0)
-                    
-                    with st.spinner("Appel à l'API..."):
-                        result = predict_client(features_dict, feature_order)
-                    
-                    if result["success"]:
-                        proba = result["proba"]
-                        classe = result["classe"]
-                        
-                        st.metric("Probabilité de défaut", f"{proba:.2%}")
-                        
-                        if classe == 1:
-                            st.error("🚨 Prédiction: DÉFAUT (Refus recommandé)")
-                        else:
-                            st.success("✅ Prédiction: PAS DE DÉFAUT (Accord possible)")
+            m1, m2 = st.columns(2)
+            with m1:
+                income = client_row.get("AMT_INCOME_TOTAL", 0)
+                st.metric("Revenu", f"{income:,.0f} €")
+                credit = client_row.get("AMT_CREDIT", 0)
+                st.metric("Crédit", f"{credit:,.0f} €")
+            with m2:
+                days_birth = abs(int(client_row.get("DAYS_BIRTH", 0)))
+                st.metric("Âge", f"{days_birth//365} ans")
+                days_emp = abs(int(client_row.get("DAYS_EMPLOYED", 0)))
+                st.metric("Emploi", f"{days_emp//365} ans")
+            
+            st.divider()
+            
+            if st.button("Obtenir la prédiction", key="predict_audit"):
+                # Préparation des features
+                features_dict = {}
+                for f in feature_order:
+                    if f in client_row.index:
+                        val = client_row[f]
+                        features_dict[f] = 0.0 if pd.isna(val) else float(val)
                     else:
-                        st.error(f"Erreur: {result['error']}")
+                        features_dict[f] = medians.get(f, 0.0)
+                
+                with st.spinner("Analyse..."):
+                    result = predict_client(features_dict, feature_order)
+                
+                if result["success"]:
+                    proba = result["proba"]
+                    classe = result["classe"]
+                    
+                    st.metric("Probabilité de défaut", f"{proba:.1%}")
+                    
+                    if classe == 1:
+                        st.error("Prédiction: DÉFAUT")
+                    else:
+                        st.success("Prédiction: PAS DE DÉFAUT")
+                else:
+                    st.error(f"Erreur: {result['error']}")
     
-    # Onglet 2 : Simulateur
-    with tab2:
-        st.header("Simulateur de crédit")
-        st.info("Modifiez les valeurs ci-dessous pour simuler une demande de crédit.")
+    # Colonne droite : Simulateur
+    with col_sim:
+        st.subheader("Simulateur de crédit")
+        st.info("Simulez votre demande de crédit")
         
-        col1, col2 = st.columns(2)
+        # Inputs en linéaire
+        income = st.number_input(
+            "Revenu annuel (€)",
+            min_value=10000.0,
+            max_value=1000000.0,
+            value=float(medians.get("AMT_INCOME_TOTAL", 150000)),
+            step=5000.0
+        )
         
-        with col1:
-            income = st.number_input(
-                "💰 Revenu annuel",
-                min_value=0.0,
-                value=float(medians.get("AMT_INCOME_TOTAL", 150000)),
-                step=10000.0
-            )
-            
-            credit = st.number_input(
-                "💳 Montant du crédit demandé",
-                min_value=0.0,
-                value=float(medians.get("AMT_CREDIT", 500000)),
-                step=50000.0
-            )
-            
-            annuity = st.number_input(
-                "📅 Annuité (paiement annuel)",
-                min_value=0.0,
-                value=float(medians.get("AMT_ANNUITY", 25000)),
-                step=1000.0
-            )
+        credit = st.number_input(
+            "Montant du crédit (€)",
+            min_value=10000.0,
+            max_value=2000000.0,
+            value=float(medians.get("AMT_CREDIT", 500000)),
+            step=10000.0
+        )
         
-        with col2:
-            age_years = st.slider("👤 Âge (années)", 18, 70, 35)
-            days_birth = -age_years * 365
-            
-            employment_years = st.slider("💼 Années d'emploi", 0, 40, 5)
-            days_employed = -employment_years * 365
-            
-            ext_source = st.slider("📊 Score externe (0-1)", 0.0, 1.0, 0.5)
+        goods_price = st.number_input(
+            "Montant de l'achat (€)",
+            min_value=10000.0,
+            max_value=2000000.0,
+            value=float(medians.get("AMT_GOODS_PRICE", 450000)),
+            step=10000.0
+        )
         
-        # Calcul des ratios métiers
+        age_years = st.slider("Âge", min_value=18, max_value=70, value=35)
+        days_birth = -age_years * 365
+        
+        employment_years = st.slider("Années d'emploi", min_value=0, max_value=45, value=5)
+        days_employed = -employment_years * 365
+        
+        loan_duration = st.slider("Durée du crédit (années)", min_value=1, max_value=30, value=20)
+        
+        # Calculs
+        annuity = credit / loan_duration if loan_duration > 0 else credit
         credit_income_percent = credit / income if income > 0 else 0
         annuity_income_percent = annuity / income if income > 0 else 0
         credit_term = annuity / credit if credit > 0 else 0
         days_employed_percent = days_employed / days_birth if days_birth != 0 else 0
+        credit_to_goods = credit / goods_price if goods_price > 0 else 1
         
         st.divider()
         
-        # Affichage des ratios calculés
-        st.subheader("Ratios calculés")
-        ratio_col1, ratio_col2, ratio_col3 = st.columns(3)
-        with ratio_col1:
-            st.metric("Crédit / Revenu", f"{credit_income_percent:.2f}")
-        with ratio_col2:
-            st.metric("Taux d'endettement", f"{annuity_income_percent:.2%}")
-        with ratio_col3:
-            st.metric("Durée crédit", f"{credit_term:.4f}")
+        # Indicateurs sur 2 colonnes
+        st.caption("**📊 Indicateurs**")
+        i1, i2 = st.columns(2)
+        with i1:
+            st.metric("Mensualité", f"{annuity/12:,.0f} €")
+            st.metric("Taux endettement", f"{annuity_income_percent*100:.0f}%")
+        with i2:
+            st.metric("Crédit/Revenu", f"{credit_income_percent:.1f}x")
+            apport = max(0, goods_price - credit)
+            st.metric("Apport", f"{apport:,.0f} €")
         
         st.divider()
         
-        if st.button("🔮 Simuler la prédiction", key="predict_sim"):
-            # Préparation des features avec les médianes par défaut
+        if st.button("Simuler", key="predict_sim", type="primary"):
+            # Préparation des features
             features_dict = medians.copy()
-            
-            # Mise à jour avec les valeurs saisies
             features_dict["AMT_INCOME_TOTAL"] = income
             features_dict["AMT_CREDIT"] = credit
             features_dict["AMT_ANNUITY"] = annuity
+            features_dict["AMT_GOODS_PRICE"] = goods_price
             features_dict["DAYS_BIRTH"] = days_birth
             features_dict["DAYS_EMPLOYED"] = days_employed
-            
-            # Scores externes
-            features_dict["EXT_SOURCE_1"] = ext_source
-            features_dict["EXT_SOURCE_2"] = ext_source
-            features_dict["EXT_SOURCE_3"] = ext_source
-            features_dict["EXT_SOURCE_MEAN"] = ext_source
-            features_dict["EXT_SOURCE_PROD"] = ext_source ** 3
-            
-            # Ratios métiers recalculés
             features_dict["CREDIT_INCOME_PERCENT"] = credit_income_percent
             features_dict["ANNUITY_INCOME_PERCENT"] = annuity_income_percent
             features_dict["CREDIT_TERM"] = credit_term
             features_dict["DAYS_EMPLOYED_PERCENT"] = days_employed_percent
+            features_dict["CREDIT_TO_GOODS_RATIO"] = credit_to_goods
             
-            with st.spinner("Appel à l'API..."):
+            with st.spinner("Analyse..."):
                 result = predict_client(features_dict, feature_order)
             
             if result["success"]:
                 proba = result["proba"]
-                classe = result["classe"]
                 
-                st.metric("Probabilité de défaut", f"{proba:.2%}")
+                st.metric("Probabilité de défaut", f"{proba:.1%}")
                 
-                if classe == 1:
-                    st.error("🚨 Prédiction: RISQUE ÉLEVÉ - Refus recommandé")
+                if proba > 0.7:
+                    st.error("**RISQUE TRÈS ÉLEVÉ**")
+                elif proba > 0.5:
+                    st.warning("**RISQUE ÉLEVÉ**")
+                elif proba > 0.3:
+                    st.info("**RISQUE MODÉRÉ**")
                 else:
-                    st.success("✅ Prédiction: RISQUE FAIBLE - Accord possible")
+                    st.success("**RISQUE FAIBLE**")
             else:
                 st.error(f"Erreur: {result['error']}")
 
