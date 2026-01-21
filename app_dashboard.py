@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # URL de l'API (variable d'environnement ou défaut local)
-API_URL = os.environ.get("API_URL", "http://localhost:5000/invocations")
+API_URL = os.environ.get("API_URL", "http://localhost:5001/invocations")
 
 # Chargement des données
 @st.cache_data

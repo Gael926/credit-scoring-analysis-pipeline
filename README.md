@@ -147,45 +147,49 @@ Le modèle retourne une probabilité de défaut et un niveau de risque.
 ### Prérequis
 - Python 3.11+
 - Docker Desktop
+- Git
 
-### Option 1 : Pipeline Local
+### Quick Start (Docker)
 
 ```bash
-# Installation
+# 1. Cloner le projet
+git clone https://github.com/Gael926/credit-scoring-analysis-pipeline.git
+cd credit-scoring-analysis-pipeline
+
+# 2. Lancer les services
+docker compose up --build
+```
+
+**Accès aux services :**
+
+| Service | URL |
+|---------|-----|
+| Dashboard | http://localhost:8501 |
+| API Modèle | http://localhost:5001 |
+| Jupyter | http://localhost:8888 |
+
+Le modèle pré-entraîné et les données du dashboard sont inclus dans le repo.
+
+---
+
+### Option Alternative : Pipeline Local
+
+Pour ré-entraîner le modèle ou modifier le pipeline :
+
+```bash
+# Installation des dépendances
 pip install -r requirements.txt
+
+# Télécharger les données depuis Kaggle
+# https://www.kaggle.com/c/home-credit-default-risk/data
+# Placer les fichiers CSV dans data/raw/
 
 # Exécution complète (entraînement + SHAP)
 python main.py --n-trials 50
 
-# Avec modèle existant (utilise le dataset en cache)
+# Avec modèle existant
 python main.py --skip-training
-
-# Forcer le re-traitement des données (ignorer le cache)
-python main.py --force-prep --n-trials 50
 ```
-
-Le dataset feature-engineered est automatiquement sauvegardé dans `data/processed/dataset_featured.parquet` après le premier run, accélérant les exécutions suivantes.
-
-
-### Option 2 : Docker (Recommandé)
-
-**1. Générer les données du dashboard :**
-```bash
-python scripts/generate_dashboard_data.py
-```
-
-**2. Lancer les services :**
-```bash
-docker compose up --build
-```
-
-**3. Accès aux services :**
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Dashboard | http://localhost:8501 | Interface utilisateur |
-| API Modèle | http://localhost:5000 | Prédictions REST |
-| Jupyter | http://localhost:8888 | Notebooks |
 
 
 ## Technologies

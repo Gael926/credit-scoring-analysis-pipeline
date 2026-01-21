@@ -15,18 +15,16 @@ data/*
 !data/**/
 !data/**/.gitkeep
 
-# Models: Ignore all content but keep directories and .gitkeep files
-models/*
-!models/**/
-!models/**/.gitkeep
+# Models: Ignore MLflow model folder but keep pkl
+models/final_model/
+mlruns/
 
 # MLruns: Ignore content but keep structure
 mlruns/*
 !mlruns/**/.gitkeep
 
-# Ignore specific file types everywhere (redundant if folders are ignored, but good safety)
+# Ignore large data files
 *.csv
-*.pkl
 
 # System files
 .DS_Store

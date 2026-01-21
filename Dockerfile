@@ -20,7 +20,7 @@ COPY . .
 ENV PYTHONPATH=/app/src
 
 # Expose the port for MLflow serving
-EXPOSE 5000
+EXPOSE 5001
 
 # Default command: Serve the model
 # We assume the model is at models/final_model relative to the build context

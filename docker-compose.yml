@@ -1,15 +1,12 @@
 services:
   model-serving:
-    image: python:3.11-slim
+    build: .
     ports:
-      - "5000:5000"
+      - "5001:5001"
     volumes:
-      - .:/app
-    working_dir: /app
-    command: >
-      bash -c "apt-get update && apt-get install -y libgomp1 && 
-               pip install flask pandas numpy scikit-learn joblib lightgbm --quiet &&
-               python api_server.py"
+      - ./models:/app/models
+      - ./dashboard_data:/app/dashboard_data
+    command: python api_server.py
     restart: always
     networks:
       - credit-network
@@ -29,17 +26,15 @@ services:
       - credit-network
 
   streamlit-app:
-    image: python:3.11-slim
+    build: .
     ports:
       - "8501:8501"
     volumes:
-      - .:/app
-    working_dir: /app
+      - ./dashboard_data:/app/dashboard_data
+      - ./reports:/app/reports
     environment:
-      - API_URL=http://model-serving:5000/invocations
-    command: >
-      bash -c "pip install streamlit requests pandas --quiet &&
-               streamlit run app_dashboard.py --server.address=0.0.0.0 --server.port=8501"
+      - API_URL=http://model-serving:5001/invocations
+    command: streamlit run app_dashboard.py --server.address=0.0.0.0 --server.port=8501
     restart: always
     depends_on:
       - model-serving
