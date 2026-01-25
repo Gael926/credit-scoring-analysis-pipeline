@@ -146,23 +146,22 @@ Le modèle retourne une probabilité de défaut et un niveau de risque.
 
 ## Installation et Exécution
 
-### Prérequis
-- Python 3.11+
-- Docker Desktop
-- Git
+### Option 1 : Dashboard en ligne (Aucune installation)
 
-### Quick Start (Docker)
+**[👉 Accéder au Dashboard](https://credit-scoring-analysis-pipeline.streamlit.app/)**
+
+---
+
+### Option 2 : Docker (Développement local)
 
 ```bash
-# 1. Cloner le projet
+# Cloner le projet
 git clone https://github.com/Gael926/credit-scoring-analysis-pipeline.git
 cd credit-scoring-analysis-pipeline
 
-# 2. Lancer les services
+# Lancer les services
 docker compose up --build
 ```
-
-**Accès aux services :**
 
 | Service | URL |
 |---------|-----|
@@ -170,27 +169,17 @@ docker compose up --build
 | API Modèle | http://localhost:5001 |
 | Jupyter | http://localhost:8888 |
 
-Le modèle pré-entraîné et les données du dashboard sont inclus dans le repo.
-
 ---
 
-### Option Alternative : Pipeline Local
-
-Pour ré-entraîner le modèle ou modifier le pipeline :
+### Option 3 : Ré-entraîner le modèle
 
 ```bash
-# Installation des dépendances
 pip install -r requirements.txt
 
-# Télécharger les données depuis Kaggle
+# Télécharger les données Kaggle dans data/raw/
 # https://www.kaggle.com/c/home-credit-default-risk/data
-# Placer les fichiers CSV dans data/raw/
 
-# Exécution complète (entraînement + SHAP)
 python main.py --n-trials 50
-
-# Avec modèle existant
-python main.py --skip-training
 ```
 
 
