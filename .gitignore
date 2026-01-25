@@ -23,8 +23,9 @@ mlruns/
 mlruns/*
 !mlruns/**/.gitkeep
 
-# Ignore large data files
+# Ignore large data files (except dashboard_data)
 *.csv
+!dashboard_data/*.csv
 
 # System files
 .DS_Store
