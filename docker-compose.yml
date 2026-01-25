@@ -33,6 +33,7 @@ services:
       - ./dashboard_data:/app/dashboard_data
       - ./reports:/app/reports
     environment:
+      - USE_API=true
       - API_URL=http://model-serving:5001/invocations
     command: streamlit run app_dashboard.py --server.address=0.0.0.0 --server.port=8501
     restart: always

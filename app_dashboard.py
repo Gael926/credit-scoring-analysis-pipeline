@@ -1,9 +1,11 @@
 # Dashboard Credit Scoring - Interface Streamlit
 import streamlit as st
 import pandas as pd
+import numpy as np
 import requests
 import json
 import os
+import joblib
 
 # Configuration de la page
 st.set_page_config(
@@ -12,8 +14,17 @@ st.set_page_config(
     layout="wide"
 )
 
-# URL de l'API (variable d'environnement ou défaut local)
+# Mode de prédiction : direct (modèle local) ou API
+USE_API = os.environ.get("USE_API", "false").lower() == "true"
 API_URL = os.environ.get("API_URL", "http://localhost:5001/invocations")
+
+# Chargement du modèle (pour mode standalone / Streamlit Cloud)
+@st.cache_resource
+def load_model():
+    try:
+        return joblib.load("models/best_model.pkl")
+    except Exception:
+        return None
 
 # Chargement des données
 @st.cache_data
@@ -27,38 +38,53 @@ def load_sample_clients():
 
 
 def predict_client(features_dict: dict, feature_order: list) -> dict:
-    """Envoie une requête à l'API et retourne la prédiction."""
+    """Prédit le risque de défaut. Utilise le modèle local ou l'API selon la config."""
     # Ordonner les features selon l'ordre attendu
     ordered_values = [features_dict.get(f, 0.0) for f in feature_order]
     
-    payload = {
-        "dataframe_split": {
-            "columns": feature_order,
-            "data": [ordered_values]
+    # Mode API (Docker)
+    if USE_API:
+        payload = {
+            "dataframe_split": {
+                "columns": feature_order,
+                "data": [ordered_values]
+            }
         }
-    }
-    
-    try:
-        response = requests.post(
-            API_URL,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=30
-        )
-        response.raise_for_status()
-        result = response.json()
         
-        # L'API retourne {"predictions": [0.75]} (probabilité)
-        predictions = result.get("predictions", [])
-        if predictions:
-            proba = float(predictions[0])
+        try:
+            response = requests.post(
+                API_URL,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            predictions = result.get("predictions", [])
+            if predictions:
+                proba = float(predictions[0])
+                classe = 1 if proba > 0.5 else 0
+                return {"success": True, "classe": classe, "proba": proba}
+            return {"success": False, "error": "Pas de prédiction"}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "error": "Impossible de contacter l'API"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    # Mode standalone (Streamlit Cloud)
+    else:
+        model = load_model()
+        if model is None:
+            return {"success": False, "error": "Modèle non trouvé"}
+        
+        try:
+            df = pd.DataFrame([ordered_values], columns=feature_order)
+            proba = float(model.predict_proba(df)[:, 1][0])
             classe = 1 if proba > 0.5 else 0
             return {"success": True, "classe": classe, "proba": proba}
-        return {"success": False, "error": "Pas de prédiction"}
-    except requests.exceptions.ConnectionError:
-        return {"success": False, "error": "Impossible de contacter l'API"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
 
 
