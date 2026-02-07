@@ -1,0 +1,5 @@
+# Mark Jupyter notebooks as documentation (not counted in stats)
+*.ipynb linguist-documentation
+
+# Mark CSV data files as vendored (not counted)
+*.csv linguist-vendored
