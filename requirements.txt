@@ -12,4 +12,4 @@ xgboost
 lightgbm
 optuna
 requests
-streamlit
+streamlit>=1.40.0
